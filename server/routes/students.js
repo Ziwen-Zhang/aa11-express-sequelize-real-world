@@ -39,7 +39,6 @@ router.get('/', async (req, res, next) => {
             For example, if firstName query parameter is 'C', then the
                 query should match with students whose firstName is 'Cam' or
                 'Royce'.
-
         lastName filter: (similar to firstName)
             If the lastName query parameter exists, set the lastName query
                 filter to find a similar match to the lastName query parameter.
@@ -56,7 +55,31 @@ router.get('/', async (req, res, next) => {
     */
     const where = {};
 
-    // Your code here 
+    // Your code here phase 4
+    const firstName = req.query.firstName
+    if (firstName) {
+        let search = firstName.split('').join('%')
+        where.firstName = {
+            [Op.like]: `%${search}%`
+        };
+    }
+    const lastName = req.query.lastName
+    if (lastName) {
+        where.lastName = {
+            [Op.like]: `%${lastName}%`
+        };
+    }
+
+    const lefty = req.query.lefty;
+
+    if (lefty !== undefined) {
+        if (lefty !== 'true' && lefty !== 'false') {
+            errorResult.errors.push('Lefty should be either true or false');
+        } else {
+            const boolean = leftyParam === 'true';
+            where.leftHanded = boolean;
+        }
+    }
 
 
     // Phase 2C: Handle invalid params with "Bad Request" response
@@ -86,17 +109,16 @@ router.get('/', async (req, res, next) => {
     // Phase 3A: Include total number of results returned from the query without
         // limits and offsets as a property of count on the result
         // Note: This should be a new query
-    let totalCount = await Student.count()
     
-    result.rows = await Student.findAll({
+    const {count ,rows} = await Student.findAndCountAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
         where,
         // Phase 1A: Order the Students search results
         order: [['lastName','ASC'],['firstName','ASC']],
         ...pagination
     });
-
-    result.count = totalCount-result.rows.length  //!!!
+    result.count = count
+    result.rows = rows
     
     // Phase 2E: Include the page number as a key of page in the response data
         // In the special case (page=0, size=0) that returns all students, set
@@ -128,6 +150,7 @@ router.get('/', async (req, res, next) => {
             }
         */
     // Your code here 
+    result.pageCount = Math.ceil(count/size)
 
     res.json(result);
 });
